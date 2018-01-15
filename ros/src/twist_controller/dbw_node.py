@@ -56,7 +56,28 @@ class DBWNode(object):
         # TODO: Create `TwistController` object
         # self.controller = TwistController(<Arguments you wish to provide>)
 
+        params = {}
+        params['vehicle_mass'] = vehicle_mass
+        params['fuel_capacity'] = fuel_capacity
+        params['brake_deadband'] = brake_deadband
+        params['decel_limit'] = decel_limit
+        params['accel_limit'] = accel_limit
+        params['wheel_radius'] = wheel_radius
+        params['wheel_base'] = wheel_base
+        params['steer_ratio'] = steer_ratio
+        params['max_lat_accel'] = max_lat_accel
+        params['max_steer_angle'] = max_steer_angle
+
+        self.controller = Controller(params)
+
         # TODO: Subscribe to all the topics you need to
+        rospy.Subscriber('/current_velocity', TwistStamped, self.current_velocity_cb)
+        rospy.Subscriber('/vehicle/dbw_enabled', Bool, self.dbw_enabled_cb)
+        rospy.Subscriber('/twist_cmd', TwistStamped, self.twist_cb)
+
+        self.current_velocity = TwistStamped()
+        self.dbw_enabled = Bool()
+        self.twist_cmd = TwistStamped()
 
         self.loop()
 
@@ -72,6 +93,10 @@ class DBWNode(object):
             #                                                     <any other argument you need>)
             # if <dbw is enabled>:
             #   self.publish(throttle, brake, steer)
+            throttle, brake, steer = self.controller.control(self.twist_cmd, self.current_velocity, self.dbw_enabled)
+            if self.dbw_enabled.data is True:
+                self.publish(throttle, brake, steer)
+
             rate.sleep()
 
     def publish(self, throttle, brake, steer):
@@ -92,6 +117,31 @@ class DBWNode(object):
         bcmd.pedal_cmd = brake
         self.brake_pub.publish(bcmd)
 
+    def current_velocity_cb(self, msg):
+        '''
+        geometry_msgs/TwistStamped
+            std_msgs/Header header
+            geometry_msgs/Twist twist
+                geometry_msgs/Vector3 linear
+                    float64 x
+                    float64 y
+                    float64 z
+                geometry_msgs/Vector3 angular
+                    float64 x
+                    float64 y
+                    float64 z
+
+        :param msg:
+        :return:
+        '''
+
+        self.current_velocity = msg
+
+    def dbw_enabled_cb(self,msg):
+        self.dbw_enabled = msg
+
+    def twist_cb(self,msg):
+        self.twist_cmd = msg
 
 if __name__ == '__main__':
     DBWNode()
