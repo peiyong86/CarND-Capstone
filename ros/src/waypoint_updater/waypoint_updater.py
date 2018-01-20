@@ -2,7 +2,8 @@
 
 import rospy
 from geometry_msgs.msg import PoseStamped
-from styx_msgs.msg import Lane, Waypoint
+from styx_msgs.msg import Lane, Waypoint, TrafficLightArray
+from std_msgs.msg import Int32
 
 import math
 
@@ -36,7 +37,8 @@ class WaypointUpdater(object):
         rospy.Subscriber('/base_waypoints', Lane, self.waypoints_cb)
 
         # TODO: Add a subscriber for /traffic_waypoint and /obstacle_waypoint below
-        # rospy.Subscriber('/traffic_waypoint', Int32, self.traffic_cb)
+        rospy.Subscriber('/traffic_waypoint', Int32, self.traffic_cb)
+        rospy.Subscriber('/vehicle/traffic_lights', TrafficLightArray, self.traffic_light_array_cb) # this should be removed for the final submission. Debug purpose.
         # rospy.Susscriber('/obstacle_waypoint', Int32, self.obstacle_cb)
 
         self.final_waypoints_pub = rospy.Publisher('final_waypoints', Lane, queue_size=1)
@@ -48,6 +50,11 @@ class WaypointUpdater(object):
 
         self.compute_distance = lambda a, b: math.sqrt((a.x - b.x) ** 2 + (a.y - b.y) ** 2 + (a.z - b.z) ** 2)
 
+        self.current_waypoint_index = 0
+        self.current_red_line_waypoint = -1 #753 is the second traffic light. this should be 0 in the final submission.
+
+        self.start_to_brake_distance = 40 #If the distance between the red traffic light and car is less than this value, start to brake
+
         rospy.spin()
 
     def pose_cb(self, msg):
@@ -56,7 +63,7 @@ class WaypointUpdater(object):
         :param msg:
         :return:
 
-        # TODO: I don't consider the velocity of the vehicle to compute the first final wayponit now. I need to revise it later. 1/2/2017
+        # TODO: I don't consider the velocity of the vehicle to compute the first final point now. I need to revise it later.
         '''
 
         current_pose = msg
@@ -71,7 +78,10 @@ class WaypointUpdater(object):
             # find the closest base waypoint by computing argmin
             closest_index = np.argmin(distances)
 
-            #Find the waypoint ahead of the car by transfroming thw waypoints to the car frame
+            #====================================================
+            # Find the waypoint ahead of the car by transforming
+            # the waypoints in the world frame to the car frame
+            #====================================================
             quaternion = (
             current_pose.pose.orientation.x, current_pose.pose.orientation.y, current_pose.pose.orientation.z,
             current_pose.pose.orientation.w)
@@ -90,15 +100,48 @@ class WaypointUpdater(object):
                     # print("closest_index={}, i ={}".format(closest_index, i))
                     break
 
+            self.current_waypoint_index = closest_index
             # define Lane message and add LOOKAHEAD_WPS waypoints ahead of the car
             final_waypoints = Lane()
             final_waypoints.header = current_pose.header
+
+            #======================================================
+            # Use a red light waypoint to modify the velocities of
+            # the final waypoints
+            #======================================================
+            # rospy.loginfo("current_index={}, red_light_index={}".format(self.current_waypoint_index, self.current_red_line_waypoint))
+            if self.current_red_line_waypoint!=-1:
+                dist_between_car_and_light=self.distance(self.base_waypoints.waypoints, self.current_waypoint_index, self.current_red_line_waypoint)
+
+                if dist_between_car_and_light<=self.start_to_brake_distance:
+
+                    waypoints_between_car_and_light = []
+                    if self.current_waypoint_index < self.current_red_line_waypoint:
+                        waypoints_between_car_and_light = range(self.current_waypoint_index, self.current_red_line_waypoint)
+                    else : #I consider the case, the car goes back to the starting point. I don't know the end of the road. I assume it comes back to the start.
+                        waypoints_between_car_and_light = range(self.current_waypoint_index, base_waypoint_length)
+                        waypoints_between_car_and_light = waypoints_between_car_and_light + range(0, self.current_red_line_waypoint)
+
+                    original_velocity = self.base_waypoints.waypoints[self.current_red_line_waypoint].twist.twist.linear.x
+                    for i, waypoint_i in enumerate(reversed(waypoints_between_car_and_light)):
+                        self.base_waypoints.waypoints[waypoint_i].twist.twist.linear.x = 0  + i * (original_velocity)/len(waypoints_between_car_and_light)
+
+                    # consider some safe margin
+                    self.base_waypoints.waypoints[(self.current_red_line_waypoint + 1)%base_waypoint_length].twist.twist.linear.x = 0
+                    self.base_waypoints.waypoints[(self.current_red_line_waypoint + 2)%base_waypoint_length].twist.twist.linear.x = 0
+
+            #======================================================
+            # Publish the final waypoints
+            #======================================================
             for i in range(LOOKAHEAD_WPS):
                 new_waypoint = self.base_waypoints.waypoints[(closest_index + i)%base_waypoint_length]
                 final_waypoints.waypoints.append(new_waypoint)
 
             # publish final waypoints here
             self.final_waypoints_pub.publish(final_waypoints)
+
+    def traffic_light_array_cb(self, msg):
+        self.traffic_lights = msg
 
     def waypoints_cb(self, waypoints):
 
@@ -122,9 +165,18 @@ class WaypointUpdater(object):
 
         # TODO: Callback for /traffic_waypoint message. Implement
         # /traffic_waypoint is published by traffic light detection node
+        # msg.data is the waypoint that is the nearest to an upcoming red light's stop line.
+        # For example, assume that msg.data = 12. Then, the velocity at waypoint[12] should be zero.
         '''
 
         self.traffic_waypoint = msg  #msg.data
+#        rospy.loginfo("data={}".format(msg.data))
+
+        if self.traffic_lights:
+ #           rospy.loginfo("current_light_index={}, more info={}".format(msg.data,self.traffic_lights.lights[self.traffic_waypoint.data]))
+            rospy.loginfo("current_light_index={}".format(msg.data))
+
+        self.current_red_line_waypoint = 753 #msg.data
 
     def obstacle_cb(self, msg):
         # TODO: Callback for /obstacle_waypoint message. We will implement it later
