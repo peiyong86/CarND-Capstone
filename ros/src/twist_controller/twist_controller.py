@@ -68,7 +68,7 @@ class Controller(object):
             brake = 0
         else:
             acceleration = throttle
-            brake = max(self.car_constant_for_brake * throttle,0) #TODO: I used throttle but it should be acceleration
+            brake = 40000 #max(self.car_constant_for_brake * throttle,0) #TODO: I used throttle but it should be acceleration
             throttle = 0.0
 
         if throttle > 1.0:
