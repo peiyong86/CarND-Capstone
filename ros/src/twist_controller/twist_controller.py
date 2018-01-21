@@ -39,6 +39,8 @@ class Controller(object):
     def control(self, twist_cmd, current_velocity, dbw_enabled):
         # TODO: Change the arg, kwarg list to suit your needs
         # Return throttle, brake, steer
+        # TODO: We need to modify brake.
+
         if self.first_control_call is True:
             self.prev_time = rospy.Time.now().to_sec()
             self.first_control_call = False
@@ -46,10 +48,12 @@ class Controller(object):
         if dbw_enabled is False:
             self.pid_control.reset()
         filtered_current_velocity = self.lowpass_filter.filt(current_velocity.twist.linear.x)
+        # filtered_current_velocity = current_velocity.twist.linear.x
         error = twist_cmd.twist.linear.x - filtered_current_velocity
-        current_time = current_velocity.header.stamp.to_sec()
+        current_time = rospy.Time.now().to_sec() #current_velocity.header.stamp.to_sec()
         sample_time = current_time - self.prev_time
         # assert sample_time<=10.0, "{},{},{}".format(sample_time, current_time , self.prev_time)
+        # rospy.loginfo("twist_vel={}, cur_time={}, sam_time={}, err={}".format(twist_cmd.twist.linear.x,current_time,sample_time, error))
         if sample_time>1.0:
             rospy.logerr("sample_time in pid controller is greater than 1.0 seconds! Use 0.01 instead")
             sample_time = 0.01
@@ -61,11 +65,10 @@ class Controller(object):
         throttle = self.pid_control.step(error, sample_time)
 
         if error >=0 :
-
             brake = 0
         else:
             acceleration = throttle
-            brake = self.car_constant_for_brake * throttle #TODO: I used throttle but it should be acceleration
+            brake = max(self.car_constant_for_brake * throttle,0) #TODO: I used throttle but it should be acceleration
             throttle = 0.0
 
         if throttle > 1.0:
@@ -76,5 +79,5 @@ class Controller(object):
 
         steer = self.yaw_control.get_steering(linear_velocity=twist_cmd.twist.linear.x, angular_velocity=twist_cmd.twist.angular.z, current_velocity=filtered_current_velocity)
 
-
+        #rospy.loginfo("throttle={}, brake={}, steer={}".format(throttle, brake, steer))
         return throttle, brake, steer
