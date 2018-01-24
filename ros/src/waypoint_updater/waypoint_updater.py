@@ -4,6 +4,7 @@ import rospy
 from geometry_msgs.msg import PoseStamped
 from styx_msgs.msg import Lane, Waypoint, TrafficLightArray
 from std_msgs.msg import Int32
+from geometry_msgs.msg import TwistStamped
 
 import math
 
@@ -33,6 +34,7 @@ class WaypointUpdater(object):
     def __init__(self):
         rospy.init_node('waypoint_updater')
 
+        rospy.Subscriber('/current_velocity', TwistStamped, self.current_velocity_cb)
         rospy.Subscriber('/current_pose', PoseStamped, self.pose_cb, queue_size=1)
         rospy.Subscriber('/base_waypoints', Lane, self.waypoints_cb)
 
@@ -54,8 +56,30 @@ class WaypointUpdater(object):
         self.current_red_line_waypoint = -1 #753 is the second traffic light. this should be 0 in the final submission.
 
         self.start_to_brake_distance = 30 #If the distance between the red traffic light and car is less than this value, start to brake
+        self.current_velocity = TwistStamped()
+        self.current_velocity.twist.linear.x = 11.0
 
         rospy.spin()
+    def current_velocity_cb(self, msg):
+        '''
+        geometry_msgs/TwistStamped
+            std_msgs/Header header
+            geometry_msgs/Twist twist
+                geometry_msgs/Vector3 linear
+                    float64 x
+                    float64 y
+                    float64 z
+                geometry_msgs/Vector3 angular
+                    float64 x
+                    float64 y
+                    float64 z
+
+        :param msg:
+        :return:
+        '''
+
+        self.current_velocity = msg
+
 
     def pose_cb(self, msg):
         '''
@@ -129,7 +153,12 @@ class WaypointUpdater(object):
 
                     for i, waypoint_i in enumerate(reversed(waypoints_between_car_and_light)):
                     # for i in range(LOOKAHEAD_WPS):
-                        self.base_waypoints.waypoints[waypoint_i].twist.twist.linear.x = max(0, 0  + (i-3) * (BASE_VELOCITY)/len(waypoints_between_car_and_light))
+
+                        if(waypoints_between_car_and_light>=6):
+                            temp_velocity = max(self.current_velocity.twist.linear.x, 5.0)  # we need some thrust. If current velocity is too low, it cannot reach the stop line.
+                        else:
+                            temp_velocity = self.current_velocity.twist.linear.x
+                        self.base_waypoints.waypoints[waypoint_i].twist.twist.linear.x = max(0, 0  + (i-3) * (temp_velocity)/len(waypoints_between_car_and_light))
                         # final_waypoints.waypoints[i].twist.twist.linear.x = max(11-i * 11.0/len(waypoints_between_car_and_light),0)
                     # consider some safe margin
                     for j in range(10):
@@ -137,7 +166,9 @@ class WaypointUpdater(object):
                 else:
                     for i in range(LOOKAHEAD_WPS):
                         self.base_waypoints.waypoints[(self.current_waypoint_index -1 + i)%base_waypoint_length].twist.twist.linear.x = BASE_VELOCITY
-
+            else:
+                for i in range(LOOKAHEAD_WPS):
+                    self.base_waypoints.waypoints[(self.current_waypoint_index -1 + i)%base_waypoint_length].twist.twist.linear.x = BASE_VELOCITY
             #======================================================
             # Publish the final waypoints
             #======================================================
