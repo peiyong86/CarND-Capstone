@@ -11,7 +11,7 @@ import math
 #added by us
 import numpy as np
 import tf #This is tf in ros NOT tensorflow!
-
+import copy
 '''
 This node will publish waypoints from the car's current position to some `x` distance ahead.
 
@@ -39,7 +39,7 @@ class WaypointUpdater(object):
         rospy.Subscriber('/base_waypoints', Lane, self.waypoints_cb)
 
         # TODO: Add a subscriber for /traffic_waypoint and /obstacle_waypoint below
-        rospy.Subscriber('/traffic_waypoint', Int32, self.traffic_cb)
+        rospy.Subscriber('/traffic_waypoint', Int32, self.traffic_cb, queue_size=1)
         rospy.Subscriber('/vehicle/traffic_lights', TrafficLightArray, self.traffic_light_array_cb) # this should be removed for the final submission. Debug purpose.
         # rospy.Susscriber('/obstacle_waypoint', Int32, self.obstacle_cb)
 
@@ -136,6 +136,8 @@ class WaypointUpdater(object):
             # I linearly reduced the velocities now. We can fit them
             # to other functions.
             #======================================================
+
+            velocity_plans={}
             # rospy.loginfo("current_index={}, red_light_index={}, x={}, y={}".format(self.current_waypoint_index, self.current_red_line_waypoint, current_pose.pose.position.x, current_pose.pose.position.y))
             if self.current_red_line_waypoint!=-1:
                 dist_between_car_and_light=self.distance(self.base_waypoints.waypoints, self.current_waypoint_index, self.current_red_line_waypoint)
@@ -158,28 +160,37 @@ class WaypointUpdater(object):
                             temp_velocity = max(self.current_velocity.twist.linear.x, 5.0)  # we need some thrust. If current velocity is too low, it cannot reach the stop line.
                         else:
                             temp_velocity = self.current_velocity.twist.linear.x
-                        self.base_waypoints.waypoints[waypoint_i].twist.twist.linear.x = max(0, 0  + (i-3) * (temp_velocity)/len(waypoints_between_car_and_light))
+                        # self.base_waypoints.waypoints[waypoint_i].twist.twist.linear.x = max(0, 0  + (i-3) * (temp_velocity)/len(waypoints_between_car_and_light))
+                        velocity_plans[waypoint_i] = max(0, 0  + (i-3) * (temp_velocity)/len(waypoints_between_car_and_light))
                         # final_waypoints.waypoints[i].twist.twist.linear.x = max(11-i * 11.0/len(waypoints_between_car_and_light),0)
                     # consider some safe margin
                     for j in range(10):
-                        self.base_waypoints.waypoints[(self.current_red_line_waypoint + j+1)%base_waypoint_length].twist.twist.linear.x = 0
-                else:
-                    for i in range(LOOKAHEAD_WPS):
-                        self.base_waypoints.waypoints[(self.current_waypoint_index -1 + i)%base_waypoint_length].twist.twist.linear.x = BASE_VELOCITY
-            else:
-                for i in range(LOOKAHEAD_WPS):
-                    self.base_waypoints.waypoints[(self.current_waypoint_index -1 + i)%base_waypoint_length].twist.twist.linear.x = BASE_VELOCITY
+                        # self.base_waypoints.waypoints[(self.current_red_line_waypoint + j+1)%base_waypoint_length].twist.twist.linear.x = 0
+                        velocity_plans[(self.current_red_line_waypoint + j)%base_waypoint_length] = 0
+                # else:
+                #     for i in range(LOOKAHEAD_WPS):
+                #         self.base_waypoints.waypoints[(self.current_waypoint_index -1 + i)%base_waypoint_length].twist.twist.linear.x = BASE_VELOCITY
+
+            # else:
+            #     for i in range(LOOKAHEAD_WPS):
+            #         self.base_waypoints.waypoints[(self.current_waypoint_index -1 + i)%base_waypoint_length].twist.twist.linear.x = BASE_VELOCITY
             #======================================================
             # Publish the final waypoints
             #======================================================
             for i in range(LOOKAHEAD_WPS):
-                new_waypoint = self.base_waypoints.waypoints[(closest_index + i)%base_waypoint_length]
+                new_waypoint = copy.deepcopy(self.base_waypoints.waypoints[(closest_index + i)%base_waypoint_length])
+                if  (closest_index + i)%base_waypoint_length in velocity_plans.keys() and  self.current_red_line_waypoint!=-1:
+                    new_waypoint.twist.twist.linear.x = velocity_plans[(closest_index + i)%base_waypoint_length]
                 if i==0:
                     final_waypoints.waypoints =[new_waypoint]
                 else:
                     final_waypoints.waypoints.append(new_waypoint)
 
             # publish final waypoints here
+            print('-----------------------------')
+            for i in range(15):
+                if self.current_red_line_waypoint!=-1:
+                    print("{} vel={}".format(self.current_red_line_waypoint, final_waypoints.waypoints[i].twist.twist.linear.x))
             self.final_waypoints_pub.publish(final_waypoints)
 
     def traffic_light_array_cb(self, msg):
@@ -198,7 +209,6 @@ class WaypointUpdater(object):
         self.waypoints_avaialbe = True
         self.base_waypoints = waypoints
 
-
     def traffic_cb(self, msg):
         '''
 
@@ -216,8 +226,8 @@ class WaypointUpdater(object):
 
         if self.traffic_lights:
  #           rospy.loginfo("current_light_index={}, more info={}".format(msg.data,self.traffic_lights.lights[self.traffic_waypoint.data]))
-            rospy.loginfo("current_light_index={}".format(msg.data))
-
+            if msg.data!=-1:
+                rospy.loginfo("current_light_index={}".format(msg.data))
         self.current_red_line_waypoint = msg.data
 
     def obstacle_cb(self, msg):
