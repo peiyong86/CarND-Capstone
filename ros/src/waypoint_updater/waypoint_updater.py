@@ -187,10 +187,10 @@ class WaypointUpdater(object):
                     final_waypoints.waypoints.append(new_waypoint)
 
             # publish final waypoints here
-            print('-----------------------------')
-            for i in range(15):
-                if self.current_red_line_waypoint!=-1:
-                    print("{} vel={}".format(self.current_red_line_waypoint, final_waypoints.waypoints[i].twist.twist.linear.x))
+            # print('-----------------------------')
+            # for i in range(15):
+            #     if self.current_red_line_waypoint!=-1:
+            #         print("{} vel={}".format(self.current_red_line_waypoint, final_waypoints.waypoints[i].twist.twist.linear.x))
             self.final_waypoints_pub.publish(final_waypoints)
 
     def traffic_light_array_cb(self, msg):

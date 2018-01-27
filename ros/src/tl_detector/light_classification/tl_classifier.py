@@ -17,7 +17,7 @@ class TLClassifier(object):
         self.sess = tf.Session()
         self.load_detector()
         self.load_classifier()
-        self.detect_threshold = 0.9
+        self.detect_threshold = 0.3 #0.9
 
         # traffic light state map
         # 'green':0, 'red':1, 'yellow':2, 'off':3
@@ -53,7 +53,7 @@ class TLClassifier(object):
     def load_detector(self):
         detector_graph_def = tf.GraphDef()
         #with open('models/ssd_mobilenet_v1_traffic_lights/frozen_inference_graph.pb', 'rb') as f:
-        with open(self.tl_detector_dir+'/light_classification/models/faster_rcnn_resnet101_traffic_lights/frozen_inference_graph.pb', 'rb') as f:
+        with open(self.tl_detector_dir+'/light_classification/models/faster_rcnn_resnet50_traffic_lights/frozen_inference_graph.pb', 'rb') as f:
             serialized = f.read()
             detector_graph_def.ParseFromString(serialized)
         tf.import_graph_def(detector_graph_def, name='detector')
