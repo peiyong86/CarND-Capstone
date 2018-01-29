@@ -1,6 +1,6 @@
 from tl_classifier import TLClassifier
-#from styx_msgs.msg import TrafficLight
-from TrafficLight import TrafficLight
+from styx_msgs.msg import TrafficLight
+#from TrafficLight import TrafficLight
 import cv2
 import os
 import sys
@@ -45,7 +45,7 @@ def main():
     
     # perform detection & classification on each image, write the result image to the out dir
     tl_classifier = TLClassifier()
-    tl_classifier.detect_threshold = 0.1
+    tl_classifier.detect_threshold = 0.5
     for in_file in tqdm(files):
         out_file = os.path.join(out_dir, os.path.basename(in_file))
         image = cv2.cvtColor(cv2.imread(in_file), cv2.COLOR_BGR2RGB)
@@ -54,11 +54,20 @@ def main():
         if len(detect_boxes) == 0:
             cv2.imwrite(out_file, image)
             continue
-        light_states = tl_classifier.run_classifier(image, detect_boxes)
-        for box, state in zip(detect_boxes, light_states):
-            color = light_colors[state]
-            label = light_labels[state]
-            draw_box(image, box.astype(np.int32), color, label)
+        #light_states = tl_classifier.run_classifier(image, detect_boxes)
+        #for box, state, score in zip(detect_boxes, light_states, detect_scores):
+        #    color = light_colors[state]
+        #    label = light_labels[state]
+        #    draw_box(image, box.astype(np.int32), color, label + " %.2f" % score)
+        #cv2.imwrite(out_file, image)
+        # get the max score index
+        index = np.argmax(detect_scores)
+        box = detect_boxes[index]
+        score = detect_scores[index]
+        state = tl_classifier.run_classifier(image, [box])[0]
+        color = light_colors[state]
+        label = light_labels[state]
+        draw_box(image, box.astype(np.int32), color, label + " %.2f" % score)
         cv2.imwrite(out_file, image)
 
 if __name__ == '__main__':

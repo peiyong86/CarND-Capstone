@@ -17,7 +17,7 @@ class TLClassifier(object):
         self.sess = tf.Session()
         self.load_detector()
         self.load_classifier()
-        self.detect_threshold = 0.3 #0.9
+        self.detect_threshold = 0.5 # 0.1 for ssd_inception_v2; 0.5 for faster_rcnn_resnet50
 
         # traffic light state map
         # 'green':0, 'red':1, 'yellow':2, 'off':3
@@ -44,15 +44,15 @@ class TLClassifier(object):
         if len(detect_boxes) == 0:
             return TrafficLight.UNKNOWN
         
-        light_states = self.run_classifier(image, detect_boxes)
-
-        # TODO how to process multiple lights?
+        # get the max score index
+        index = np.argmax(detect_scores)
+        light_states = self.run_classifier(image, [detect_boxes[index]])
 
         return light_states[0]
 
     def load_detector(self):
         detector_graph_def = tf.GraphDef()
-        #with open('models/ssd_mobilenet_v1_traffic_lights/frozen_inference_graph.pb', 'rb') as f:
+        #with open('models/ssd_inception_v2_traffic_lights/frozen_inference_graph.pb', 'rb') as f:
         with open(self.tl_detector_dir+'/light_classification/models/faster_rcnn_resnet50_traffic_lights/frozen_inference_graph.pb', 'rb') as f:
             serialized = f.read()
             detector_graph_def.ParseFromString(serialized)
@@ -132,4 +132,4 @@ class TLClassifier(object):
 
         light_states = map(lambda i: self.light_state_dict[i], light_states_index)
 
-        return light_states
+        return list(light_states)
