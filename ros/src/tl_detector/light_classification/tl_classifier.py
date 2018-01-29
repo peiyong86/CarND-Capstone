@@ -56,7 +56,7 @@ class TLClassifier(object):
 
     def load_detector(self):
         detector_graph_def = tf.GraphDef()
-        #with open('models/ssd_inception_v2_traffic_lights/frozen_inference_graph.pb', 'rb') as f:
+        #with open(self.tl_detector_dir+'/light_classification/models/ssd_inception_v2_traffic_lights/frozen_inference_graph.pb', 'rb') as f:
         with open(self.tl_detector_dir+'/light_classification/models/faster_rcnn_resnet50_traffic_lights/frozen_inference_graph.pb', 'rb') as f:
             serialized = f.read()
             detector_graph_def.ParseFromString(serialized)
