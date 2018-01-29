@@ -6,6 +6,7 @@ import numpy as np
 
 import rospkg #TT
 
+
 class TLClassifier(object):
     def __init__(self):
 
@@ -14,7 +15,10 @@ class TLClassifier(object):
         self.tl_detector_dir = rospack.get_path('tl_detector')
 
         # TODO load classifier
-        self.sess = tf.Session()
+        config = tf.ConfigProto()
+        config.gpu_options.allow_growth = True
+        self.sess = tf.Session(config=config)
+        #self.sess = tf.Session()
         self.load_detector()
         self.load_classifier()
         self.detect_threshold = 0.5 # 0.1 for ssd_inception_v2; 0.5 for faster_rcnn_resnet50
@@ -60,6 +64,7 @@ class TLClassifier(object):
         self.detection_input = self.sess.graph.get_tensor_by_name('detector/image_tensor:0')
         self.detection_boxes = self.sess.graph.get_tensor_by_name('detector/detection_boxes:0')
         self.detection_scores = self.sess.graph.get_tensor_by_name('detector/detection_scores:0')
+        print("load detector model succeed.")
 
     def load_classifier(self):
         classifier_graph_def = tf.GraphDef()
@@ -70,6 +75,7 @@ class TLClassifier(object):
         self.classifier_input = self.sess.graph.get_tensor_by_name('classifier/input_image:0')
         self.classifier_keep_prob = self.sess.graph.get_tensor_by_name('classifier/keep_prob:0')
         self.classifier_prediction = self.sess.graph.get_tensor_by_name('classifier/prediction:0')
+        print("load classifier model succeed.")
 
     def run_detector(self, image):
         # run the detection net
