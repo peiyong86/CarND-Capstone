@@ -1,3 +1,24 @@
+
+### Udacity Self-driving Car Nano Degree Capston Project
+### TEAM: TF-WYRM
+
+|Name               |email |github   |Role   |
+|---|---|---|---|
+|Takeshi Takahashi  |ttakahashi07@gmail.com|takeshi765   |Team lead, Control, Path Planning|   
+|Wen-Lin Zhang      |zwlin_2004@163.com|Wenlin-Zhang |Traffic light detection   |   
+|Yong Pei           |peiyong86@gmail.com  |peiyong86    | Traffic light detection  |
+|Minh Nguyen        |tuanminh.nus@gmail.com|iceberg12         |Control, Path Planning   |
+|Fuhou Tian         |airbird0421@gmail.com|airbird0421     |Control, Path Planning     ||
+
+## 1. Traffic light detection
+[Please refer to this](./ros/src/tl_detector/light_classification/README.md)
+## 2. Path Planning (Waypoint Updater)
+[Please refer to this implementation](./ros/src/waypoint_updater)
+## 3. Control (DBW)
+[Please refer to this implementation](./ros/src/twist_controller)
+
+
+### ----------------- Original README ------------------------
 This is the project repo for the final project of the Udacity Self-Driving Car Nanodegree: Programming a Real Self-Driving Car. For more information about the project, see the project introduction [here](https://classroom.udacity.com/nanodegrees/nd013/parts/6047fe34-d93c-4f50-8336-b70ef10cb4b2/modules/e1a23b06-329a-4684-a717-ad476f0d8dff/lessons/462c933d-9f24-42d3-8bdc-a08a5fc866e4/concepts/5ab4b122-83e6-436d-850f-9f4d26627fd9).
 
 Please use **one** of the two installation options, either native **or** docker installation.
