@@ -97,7 +97,7 @@ class Controller(object):
         steer = self.yaw_control.get_steering(linear_velocity=twist_cmd.twist.linear.x, angular_velocity=twist_cmd.twist.angular.z, current_velocity=filtered_current_velocity)
         # throttle = min(throttle * max(1.0, abs((2.0*math.pi- steer)/2.0*math.pi)),0.05)
         throttle = self.throttle_scaling * throttle
-
+        brake = self.brake_scaling * brake
         # brake = self.brake_scaling * brake
         # rospy.loginfo("raw_throttle={}, throttle={}, brake={}, steer={}".format(raw_throttle, throttle, brake, steer))
         return throttle, brake, steer

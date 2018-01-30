@@ -48,7 +48,7 @@ class WaypointUpdater(object):
         self.current_velocity.twist.linear.x = 0.0
         # self.target_v = 11.0 # this should be initialized from base waypoints
         self.accel = 3.0 # any requirement?
-        self.decel = 0.4 #3.0 # any requirement?
+        self.decel = 0.6 #3.0 # any requirement?
 
 
 
@@ -104,8 +104,12 @@ class WaypointUpdater(object):
             
             current_waypoint_index = self.get_idx(
                 self.base_waypoints.waypoints, msg)
-            #print("cur idx:", current_waypoint_index)
+
+            # current_waypoint_index2 = self.get_idx2(
+            #     self.base_waypoints.waypoints, msg)
+            # print("cur idx:={}, {}".format(current_waypoint_index,current_waypoint_index2))
             # define Lane message and add LOOKAHEAD_WPS waypoints ahead of the car
+
             final_waypoints = Lane()
             final_waypoints.header = current_pose.header
 
@@ -255,6 +259,44 @@ class WaypointUpdater(object):
         return dist
 
     def get_idx(self, waypoints, msg):
+        #====================================
+        # FIND THE CLOSEST WAYPOINT
+        # ====================================
+        current_pose = msg
+
+        # compute distances between the current position and all waypoints
+        base_waypoint_length = len(waypoints)
+        distances = [self.compute_distance(current_pose.pose.position, waypoints[i].pose.pose.position) for i in range(base_waypoint_length)]
+        # find the closest base waypoint by computing argmin
+        closest_index = np.argmin(distances)
+
+          #====================================================
+        # Find the waypoint ahead of the car by transforming
+        # the waypoints in the world frame to the car frame
+        #====================================================
+        quaternion = (
+        current_pose.pose.orientation.x, current_pose.pose.orientation.y, current_pose.pose.orientation.z,
+        current_pose.pose.orientation.w)
+        euler = tf.transformations.euler_from_quaternion(quaternion)
+        yaw = euler[2]
+        for i in range(3):
+            temp_index = (closest_index - 1+i)%base_waypoint_length
+            x = waypoints[temp_index].pose.pose.position.x - current_pose.pose.position.x
+            y = waypoints[temp_index].pose.pose.position.y - current_pose.pose.position.y
+
+            x_in_car_frame =  math.cos(yaw) * x + math.sin(yaw) * y
+            y_in_car_frame = -math.sin(yaw) * x + math.cos(yaw) * y
+
+            if x_in_car_frame >= 0:
+                closest_index = temp_index
+                # print("closest_index={}, i ={}".format(closest_index, i))
+                break
+
+        # self.current_waypoint_index = closest_index
+        return closest_index
+
+    def get_idx2(self, waypoints, msg):
+
         idx_x = -1
         idx_y = -1
         delta_x = 0
