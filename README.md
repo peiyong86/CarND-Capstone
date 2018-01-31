@@ -6,7 +6,7 @@
 |---|---|---|---|
 |Takeshi Takahashi  |ttakahashi07@gmail.com|takeshi765   |Team lead, Control, Path Planning|   
 |Wen-Lin Zhang      |zwlin_2004@163.com|Wenlin-Zhang |Traffic light detection   |   
-|Yong Pei           |peiyong86@gmail.com  |peiyong86    | Traffic light detection  |
+|Yong Pei           |pygoodmood@gmail.com  |peiyong86    | Traffic light detection  |
 |Minh Nguyen        |tuanminh.nus@gmail.com|iceberg12         |Control, Path Planning   |
 |Fuhou Tian         |airbird0421@gmail.com|airbird0421     |Control, Path Planning     ||
 
